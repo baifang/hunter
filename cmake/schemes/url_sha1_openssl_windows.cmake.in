@@ -36,24 +36,7 @@ set_directory_properties(
     "@HUNTER_BASE@"
 )
 
-# If prefix contain spaces `nmake` will failed
-# Workaround:
-#     1) install files to temporary folder
-#     2) move files from temp dir to `HUNTER_PACKAGE_INSTALL_DIR`
-get_filename_component(TEMP_INSTALL_DIR "$ENV{WINDIR}" ABSOLUTE)
-
-string(COMPARE EQUAL "${TEMP_INSTALL_DIR}" "" is_empty)
-if(is_empty)
-  hunter_internal_error("Environment variable WINDIR is empty")
-endif()
-
-get_filename_component(TEMP_INSTALL_DIR "${TEMP_INSTALL_DIR}/.." ABSOLUTE)
-
-if(NOT EXISTS "${TEMP_INSTALL_DIR}")
-  hunter_internal_error("Unexpected WINDIR: $ENV{WINDIR}")
-endif()
-
-set(TEMP_INSTALL_DIR "${TEMP_INSTALL_DIR}/temp-hunter-openssl-REMOVE_ME")
+# NOTE: If prefix contain spaces `nmake` will fail
 
 if(MSVC_VERSION VERSION_LESS 1800)
   hunter_fatal_error(
@@ -119,7 +102,7 @@ ExternalProject_Add(
     CONFIGURE_COMMAND
     "@HUNTER_MSVC_VCVARSALL@" "@HUNTER_MSVC_ARCH@"
     COMMAND
-    perl Configure "${opt}" no-asm "--prefix=${TEMP_INSTALL_DIR}"
+    perl Configure "${opt}" no-asm "--prefix=@HUNTER_PACKAGE_INSTALL_DIR@"
     COMMAND
     ms/${do_ms}
     ###
@@ -131,14 +114,4 @@ ExternalProject_Add(
     INSTALL_COMMAND
     COMMAND
     nmake -f "ms\\nt.mak" install
-    COMMAND
-    "${CMAKE_COMMAND}" -E make_directory "@HUNTER_PACKAGE_INSTALL_DIR@"
-    COMMAND
-    "${CMAKE_COMMAND}"
-    -E
-    copy_directory
-    "${TEMP_INSTALL_DIR}"
-    "@HUNTER_PACKAGE_INSTALL_DIR@"
-    COMMAND
-    "${CMAKE_COMMAND}" -E remove_directory "${TEMP_INSTALL_DIR}"
 )
